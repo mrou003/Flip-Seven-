@@ -1,4 +1,4 @@
-print("hello world")
-print("from Prototytpe")
-def hello(x):
-    return x
+def testcommit(message):
+    print(message)
+
+testcommit("I m a witch")
