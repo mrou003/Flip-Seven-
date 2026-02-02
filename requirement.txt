@@ -1,0 +1,4 @@
+matplotlib
+numpy
+pyside6
+pyodbc
