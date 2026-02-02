@@ -5,7 +5,10 @@ from PySide6.QtWidgets import (
     QApplication, QWidget, QPushButton, QVBoxLayout, QLabel, QHBoxLayout, QSizePolicy
 )
 from PySide6.QtGui import QFont, QPixmap
-from LeftWindow import leftWindow
+from P01_Simulation_Game.P01_simulationGame import Simulation
+
+from .LeftWindow import leftWindow
+
 
 class MainWindow(QWidget):
     def __init__(self, intx, inty):
@@ -29,21 +32,29 @@ class MainWindow(QWidget):
         self.leftWidget = leftWindow()
         self.leftWidget.setMaximumWidth(200)
 
-        self.rightWidget = QWidget()
-        self.rightWidget.setStyleSheet("""
-            background-color: rgb(222, 233, 247);
-        """)
+        self.rightWidget = Simulation()
+        
 
         self.MainLayout.addWidget(self.leftWidget)
         self.MainLayout.addWidget(self.rightWidget)
         self.upperMainWidget.setLayout(self.MainLayout)
 
         self.LowerWidgetBox = QWidget()
-        text = QLabel()
-        text.setText("hello")
+        self.text = QLabel()
+        self.text.setFont(QFont("AppleGothic", 20))
+        self.text.setAlignment(Qt.AlignRight)
+
+        
+        self.text.setStyleSheet("""
+            QLabel{
+                color: black;
+            }
+        """)
+        self.text.setText("hello")
+        
         
         testLayout = QVBoxLayout()
-        testLayout.addWidget(text)
+        testLayout.addWidget(self.text)
         self.LowerWidgetBox.setLayout(testLayout)
         
         
@@ -60,4 +71,11 @@ class MainWindow(QWidget):
         self.MainLayoutVBox.addWidget(self.LowerWidgetBox)
 
         self.setLayout(self.MainLayoutVBox)
+        self.leftWidget.pluginSelected.connect(self.on_plugin_selected)
+        
+
+    def on_plugin_selected(self, plugin_name):
+        
+        print(plugin_name,"from Main Window")
+        self.text.setText(plugin_name)
 

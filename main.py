@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QApplication, QWidget, QPushButton, QVBoxLayout, QLabel, QHBoxLayout
 )
 from PySide6.QtGui import QFont, QPixmap
-from MainWindow import MainWindow
+from MainWidgetFolder.MainWindow import MainWindow
 
 
 if __name__ == "__main__":
