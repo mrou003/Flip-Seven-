@@ -1,81 +1,180 @@
-import sys
-from PySide6.QtCore import Qt
-
+import random
+from PySide6.QtCore import Qt, Signal, QObject
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QPushButton, QVBoxLayout, QLabel, QHBoxLayout, QSizePolicy
+    QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel
 )
-from PySide6.QtGui import QFont, QPixmap
+from PySide6.QtGui import QPixmap, QFont
+
+class GameEngine(QObject):
+    doublon = Signal()
+
+    def __init__(self):
+        super().__init__()
+        self.reset()
+
+    def reset(self):
+        self.packet = []
+        self.hand = []
+        distribution = [1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+        for value, count in enumerate(distribution):
+            self.packet.extend([value] * count)
+
+        random.shuffle(self.packet)
+        self.index = 0
+
+    def draw_card(self):
+        if self.index >= len(self.packet):
+            return None
+
+        value = self.packet[self.index]
+        self.index += 1
+
+        if value in self.hand:
+            self.doublon.emit()
+            return None
+
+        self.hand.append(value)
+        return value
 
 class Simulation(QWidget):
     def __init__(self):
         super().__init__()
+
+        self.setObjectName("Simulation")
         self.setStyleSheet("""
-            background-color: rgb(222, 233, 247);
-        """)
-        lowerlayout = QHBoxLayout()
-        lowerWidget = QWidget()
-
-        layout = QVBoxLayout(self)
-        self.label = QLabel()
-        pixmap = QPixmap("image/12.png")
-        self.label_back = QLabel()
-        pixmap_back = QPixmap("image/back_card.png")
-        
-
-        
-        self.upperLayout = QHBoxLayout(self)
-        self.leftWidget = QWidget()
-        self.rightWidget = QWidget()
-        pixmab_back_card = pixmap_back.scaled(
-                300,
-                400,
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation
-            )
-       
-        pixmap_card = pixmap.scaled(
-                300,
-                400,
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation
-            )
-        self.label_back.setPixmap(pixmab_back_card)
-        self.label_back.setScaledContents(True)
-        self.label.setPixmap(pixmap_card)
-        self.label.setScaledContents(True)
-        self.button_pull = ButtonPull("Tirez une carte")
-        self.button_stop = ButtonPull("Arretez de tirer")
-        self.upperLayout.addWidget(self.leftWidget)
-       
-        self.upperLayout.addWidget(self.label)
-        
-        self.upperLayout.addWidget(self.label_back)
-        upperWidget = QWidget()
-        upperWidget.setLayout(self.upperLayout)
-
-        layout.addWidget(upperWidget)
-        lowerlayout.addWidget(self.button_pull)
-        lowerlayout.addWidget(self.button_stop)
-        layout.addWidget(lowerWidget)
-
-        
-class ButtonPull(QPushButton):
-    def __init__(self, text):
-        super().__init__(text)
-        self.clicked.connect(self.on_button_press)
-
-        font = QFont("AppleGothic", 20)
-        self.setFont(font)
-
-        self.setStyleSheet("""
-            QPushButton {
+            QWidget#Simulation {
                 background-color: rgb(188, 210, 238);
-                border-radius: 5px;
-                color: black;
-                font-weight: bold;
-                padding: 10px;
             }
         """)
 
-    def on_button_press(self):
-        print("Bouton pressé !")
+        self.game = GameEngine()
+        self.game.doublon.connect(self.on_doublon)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.piles = DisplayPiles()
+        self.hand = HandWidget()
+        self.buttons = ButtonWidget()
+
+        layout.addWidget(self.piles)
+        layout.addWidget(self.hand)
+        layout.addWidget(self.buttons)
+
+        self.buttons.pullClicked.connect(self.draw_card)
+
+    def draw_card(self):
+        value = self.game.draw_card()
+        if value is None:
+            return
+
+        self.piles.show_card(value)
+        self.hand.add_card(value)
+
+    def on_doublon(self):
+        self.hand.clear()
+        self.piles.reset()
+        self.game.reset()
+
+
+# =========================
+# AFFICHAGE DES PILES
+# =========================
+
+class DisplayPiles(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.layout = QHBoxLayout(self)
+        self.layout.setAlignment(Qt.AlignCenter)
+
+        self.left = CardLabel("back_card", 200, 300)
+        self.right = CardLabel("back_card", 200, 300)
+
+        self.layout.addWidget(self.left)
+        self.layout.addWidget(self.right)
+
+    def show_card(self, value):
+        self.left.set_card(value)
+
+    def reset(self):
+        self.left.set_card("back_card")
+
+
+
+class HandWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.layout = QHBoxLayout(self)
+        self.layout.setAlignment(Qt.AlignLeft)
+
+    def add_card(self, value):
+        self.layout.addWidget(CardLabel(value, 50, 70))
+
+    def clear(self):
+        while self.layout.count():
+            item = self.layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
+
+
+class ButtonWidget(QWidget):
+    pullClicked = Signal()
+
+    def __init__(self):
+        super().__init__()
+
+        layout = QHBoxLayout(self)
+
+        pull = GameButton("Tirer une carte")
+        stop = GameButton("Arrêter")
+
+        layout.addWidget(pull)
+        layout.addWidget(stop)
+
+        pull.clicked.connect(self.pullClicked.emit)
+        stop.clicked.connect(self.on_stop)
+
+    def on_stop(self):
+        print("Arrêt du tour")
+
+
+class GameButton(QPushButton):
+    def __init__(self, text):
+        super().__init__(text)
+        self.setFont(QFont("AppleGothic", 18))
+        self.setStyleSheet("""
+            QPushButton {
+                background-color: rgb(188, 210, 238);
+                border-radius: 6px;
+                padding: 10px;
+                font-weight: bold;
+            }
+        """)
+
+
+class CardLabel(QLabel):
+    def __init__(self, value, w, h):
+        super().__init__()
+        self.setFixedSize(w, h)
+        self.setAlignment(Qt.AlignCenter)
+        self.setScaledContents(True)
+        self.set_card(value)
+
+    def set_card(self, value):
+        pixmap = QPixmap(f"image/{value}.png")
+        if pixmap.isNull():
+            self.setText("Image\nmanquante")
+            return
+
+        self.setPixmap(
+            pixmap.scaled(
+                self.size(),
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
+            )
+        )

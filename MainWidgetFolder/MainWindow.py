@@ -16,12 +16,7 @@ class MainWindow(QWidget):
 
         self.resize(intx, inty)
 
-        self.setObjectName("MainWindow")
-        self.setStyleSheet("""
-            QWidget#MainWindow {
-                background-color: rgb(87, 97, 112);
-            }
-        """)
+        
 
         self.upperMainWidget = QWidget()
 
@@ -31,8 +26,12 @@ class MainWindow(QWidget):
 
         self.leftWidget = leftWindow()
         self.leftWidget.setMaximumWidth(200)
+        
 
-        self.rightWidget = Simulation()
+        self.rightWidget = QWidget()
+        self.rightLayout = QVBoxLayout(self.rightWidget)
+        self.rightLayout.setContentsMargins(0, 0, 0, 0)
+        self.rightLayout.setSpacing(0)
         
 
         self.MainLayout.addWidget(self.leftWidget)
@@ -40,6 +39,7 @@ class MainWindow(QWidget):
         self.upperMainWidget.setLayout(self.MainLayout)
 
         self.LowerWidgetBox = QWidget()
+        
         self.text = QLabel()
         self.text.setFont(QFont("AppleGothic", 20))
         self.text.setAlignment(Qt.AlignRight)
@@ -72,10 +72,25 @@ class MainWindow(QWidget):
 
         self.setLayout(self.MainLayoutVBox)
         self.leftWidget.pluginSelected.connect(self.on_plugin_selected)
-        
+    
+    def clear_layout(self, layout):
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
 
     def on_plugin_selected(self, plugin_name):
         
-        print(plugin_name,"from Main Window")
+        print(plugin_name, "from Main Window")
         self.text.setText(plugin_name)
+        self.clear_layout(self.rightLayout)
+
+        if plugin_name == "Simulation":
+            self.rightLayout.addWidget(Simulation())
+
+
+        
+    
 

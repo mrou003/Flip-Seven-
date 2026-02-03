@@ -33,7 +33,7 @@ class ListPlugin(QListView):
 
         self.model = QStringListModel()
         self.model.setStringList([
-            "Simulation Game",
+            "Simulation",
             "Another Plugin"
         ])
         self.setModel(self.model)

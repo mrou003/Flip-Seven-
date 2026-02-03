@@ -10,6 +10,6 @@ from MainWidgetFolder.MainWindow import MainWindow
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    fen = MainWindow(600, 600)
+    fen = MainWindow(800, 800)
     fen.show()
     sys.exit(app.exec())
