@@ -10,6 +10,8 @@ from P01_Simulation_Game.P01_simulationGame import Simulation
 from .LeftWindow import leftWindow
 
 
+
+
 class MainWindow(QWidget):
     def __init__(self, intx, inty):
         super().__init__()
@@ -50,7 +52,7 @@ class MainWindow(QWidget):
                 color: black;
             }
         """)
-        self.text.setText("hello")
+ 
         
         
         testLayout = QVBoxLayout()
@@ -83,12 +85,14 @@ class MainWindow(QWidget):
 
     def on_plugin_selected(self, plugin_name):
         
-        print(plugin_name, "from Main Window")
         self.text.setText(plugin_name)
         self.clear_layout(self.rightLayout)
 
         if plugin_name == "Simulation":
-            self.rightLayout.addWidget(Simulation())
+            UI = Simulation()
+            self.rightLayout.addWidget(UI)
+        
+        
 
 
         

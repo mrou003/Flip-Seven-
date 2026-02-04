@@ -1,12 +1,16 @@
 import random
-from PySide6.QtCore import Qt, Signal, QObject
+from PySide6.QtCore import Qt, Signal, QObject, QTimer
 from PySide6.QtWidgets import (
     QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel
 )
 from PySide6.QtGui import QPixmap, QFont
+from AI.B1_statisitque import B1_stat
 
 class GameEngine(QObject):
     doublon = Signal()
+    card = Signal(int)
+    signalIndexCard = Signal(int)
+    signalHand = Signal(object) 
 
     def __init__(self):
         super().__init__()
@@ -14,6 +18,8 @@ class GameEngine(QObject):
         self.essaie = 0
         self.indexCard = 0
         self.startGame()
+        
+    
 
     def startGame(self):
         self.packet = []
@@ -23,22 +29,33 @@ class GameEngine(QObject):
 
         for value, count in enumerate(distribution):
             self.packet.extend([value] * count)
+        
 
         random.shuffle(self.packet)
         self.index = 0
         
     def draw_card(self):
+        
+        self.signalIndexCard.emit(self.index)
+  
         if self.index >= len(self.packet):
             return None
-
+       
         value = self.packet[self.index]
+        self.card.emit(self.packet[self.index])
         self.index += 1
-
+   
+      
         if value in self.hand:
             self.doublon.emit()
             return None
-
         self.hand.append(value)
+        self.signalHand.emit(self.hand)
+        
+
+        
+       
+        
         return value
     
     def count(self):
@@ -46,19 +63,13 @@ class GameEngine(QObject):
         
         self.score = self.score +sum(self.hand)
         self.essaie +=1
-        print("hand : " ,self.hand)
-        print("packet : ", self.packet)
-        print("index : " ,self.index)
         self.hand = []
+
         
         return self.score, self.essaie
     def fail(self):
        
         self.essaie +=1
-        
-        print("hand : " ,self.hand)
-        print("packet : ", self.packet)
-        print("index : " ,self.index)
         self.hand = []
         
         return self.score, self.essaie
@@ -71,7 +82,8 @@ class GameEngine(QObject):
 class Simulation(QWidget):
     def __init__(self):
         super().__init__()
-
+        
+        
         self.setObjectName("Simulation")
         self.setStyleSheet("""
             QWidget#Simulation {
@@ -81,6 +93,14 @@ class Simulation(QWidget):
 
         self.game = GameEngine()
         self.game.doublon.connect(self.on_doublon)
+        self.game.card.connect(self.getCard)
+        self.game.signalIndexCard.connect(self.statusGame)
+        self.game.signalHand.connect(self.getHand)
+        
+        self.bot = B1_stat()
+        self.isBot = True
+        self.bot.Action.connect(self.actionBot)
+        
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -97,33 +117,81 @@ class Simulation(QWidget):
 
         self.buttons.pullClicked.connect(self.draw_card)
         self.buttons.StopClicked.connect(self.countCard)
+        self.isEmpty = False
+    
+    def actionBot(self,Action):
+        if self.isBot == True: 
+            if Action =="Pull":
+            
+                QTimer.singleShot(1000,self.draw_card)
+                
+            else:
+                
+                QTimer.singleShot(1000,self.countCard)
+    
+    def getHand(self,hand):
+        self.bot.getHand(hand)
+
 
     def draw_card(self):
-        value = self.game.draw_card()
-        if value is None:
-            return
-
-        self.piles.show_card(value)
-        self.hand.add_card(value)
+        
+        if self.isEmpty ==False:
+        
+            value = self.game.draw_card()
+            if value is None:
+                    return
+            
+            self.piles.show_card(value)
+            self.hand.add_card(value)
+        else : 
+            
+            self.scoreLabel.setText(f"Partie Terminé : Score : {self.score} Nombre d'essais :{self.essaie}")
+        
+        
+    def getCard(self,card):
+        self.cardHand = card
+        self.bot.getCard(card)
+        
+        
+    def statusGame(self,index):
+        nbrCardLeft = 78 - index
+            
+        print("Il reste {}".format(nbrCardLeft))
+        if nbrCardLeft == 0:
+            self.isEmpty = True
+           
+        else: 
+            self.isEmpty = False
+          
+        
+   
+    
 
     def on_doublon(self):
-        
-        self.hand.clear()
-        self.piles.reset()
 
-        score,essaie = self.game.fail()
-        self.scoreLabel.setText(f"Score : {score} Nombre d'essais :{essaie}")
-        
-    
+            self.hand.clear()
+            self.piles.reset()
+            self.score,self.essaie = self.game.fail()
+            self.scoreLabel.setText(f"Score : {self.score} Nombre d'essais :{self.essaie}")
+            self.piles.showdoublon(self.cardHand)
+            
+            if self.isBot == True:
+                self.draw_card()
+
     def countCard(self):
-        self.hand.clear()
-        self.piles.reset()
-        score, essaie = self.game.count()
-        self.scoreLabel.setText(f"Score : {score} Nombre d'essais :{essaie}")
+        if self.isEmpty ==False:
+        
+            self.hand.clear()
+            self.piles.reset()
+            self.score, self.essaie = self.game.count()
+            self.scoreLabel.setText(f"Score : {self.score} Nombre d'essais :{self.essaie}")
+            if self.isBot == True:
+                self.draw_card()
+        else : 
+            
+            self.scoreLabel.setText(f"Partie Terminé : Score : {self.score} Nombre d'essais :{self.essaie}")
         
 
-
-        
 
 class DisplayPiles(QWidget):
     def __init__(self):
@@ -137,7 +205,14 @@ class DisplayPiles(QWidget):
 
         self.layout.addWidget(self.left)
         self.layout.addWidget(self.right)
-
+    def showdoublon(self,card):
+        self.right.set_card(card)
+        QTimer.singleShot(1000,self.resetRightCard)
+        
+    def resetRightCard(self):
+        self.right.set_card("back_card")
+        
+        
     def show_card(self, value):
         self.left.set_card(value)
 
