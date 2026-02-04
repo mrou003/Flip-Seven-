@@ -10,11 +10,15 @@ class GameEngine(QObject):
 
     def __init__(self):
         super().__init__()
-        self.reset()
+        self.score = 0
+        self.essaie = 0
+        self.indexCard = 0
+        self.startGame()
 
-    def reset(self):
+    def startGame(self):
         self.packet = []
         self.hand = []
+        
         distribution = [1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
         for value, count in enumerate(distribution):
@@ -22,7 +26,7 @@ class GameEngine(QObject):
 
         random.shuffle(self.packet)
         self.index = 0
-
+        
     def draw_card(self):
         if self.index >= len(self.packet):
             return None
@@ -36,6 +40,33 @@ class GameEngine(QObject):
 
         self.hand.append(value)
         return value
+    
+    def count(self):
+        
+        
+        self.score = self.score +sum(self.hand)
+        self.essaie +=1
+        print("hand : " ,self.hand)
+        print("packet : ", self.packet)
+        print("index : " ,self.index)
+        self.hand = []
+        
+        return self.score, self.essaie
+    def fail(self):
+       
+        self.essaie +=1
+        
+        print("hand : " ,self.hand)
+        print("packet : ", self.packet)
+        print("index : " ,self.index)
+        self.hand = []
+        
+        return self.score, self.essaie
+        
+        
+        
+    
+    
 
 class Simulation(QWidget):
     def __init__(self):
@@ -54,15 +85,18 @@ class Simulation(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
+        self.scoreLabel = ScoreLabel()
         self.piles = DisplayPiles()
         self.hand = HandWidget()
         self.buttons = ButtonWidget()
-
+        
+        layout.addWidget(self.scoreLabel)
         layout.addWidget(self.piles)
         layout.addWidget(self.hand)
         layout.addWidget(self.buttons)
 
         self.buttons.pullClicked.connect(self.draw_card)
+        self.buttons.StopClicked.connect(self.countCard)
 
     def draw_card(self):
         value = self.game.draw_card()
@@ -73,14 +107,23 @@ class Simulation(QWidget):
         self.hand.add_card(value)
 
     def on_doublon(self):
+        
         self.hand.clear()
         self.piles.reset()
-        self.game.reset()
+
+        score,essaie = self.game.fail()
+        self.scoreLabel.setText(f"Score : {score} Nombre d'essais :{essaie}")
+        
+    
+    def countCard(self):
+        self.hand.clear()
+        self.piles.reset()
+        score, essaie = self.game.count()
+        self.scoreLabel.setText(f"Score : {score} Nombre d'essais :{essaie}")
+        
 
 
-# =========================
-# AFFICHAGE DES PILES
-# =========================
+        
 
 class DisplayPiles(QWidget):
     def __init__(self):
@@ -111,7 +154,7 @@ class HandWidget(QWidget):
         self.layout.setAlignment(Qt.AlignLeft)
 
     def add_card(self, value):
-        self.layout.addWidget(CardLabel(value, 50, 70))
+        self.layout.addWidget(CardLabel(value, 100, 140))
 
     def clear(self):
         while self.layout.count():
@@ -124,6 +167,7 @@ class HandWidget(QWidget):
 
 class ButtonWidget(QWidget):
     pullClicked = Signal()
+    StopClicked = Signal()
 
     def __init__(self):
         super().__init__()
@@ -137,10 +181,11 @@ class ButtonWidget(QWidget):
         layout.addWidget(stop)
 
         pull.clicked.connect(self.pullClicked.emit)
-        stop.clicked.connect(self.on_stop)
+        stop.clicked.connect(self.StopClicked.emit)
+        
+        
 
-    def on_stop(self):
-        print("Arrêt du tour")
+    
 
 
 class GameButton(QPushButton):
@@ -178,3 +223,12 @@ class CardLabel(QLabel):
                 Qt.SmoothTransformation
             )
         )
+
+class ScoreLabel(QLabel):
+    def __init__(self):
+        super().__init__()
+        self.setFont(QFont("AppleGothic", 36,10))
+        self.setAlignment(Qt.AlignCenter)
+        
+       
+    
